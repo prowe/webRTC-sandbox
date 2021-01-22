@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useReducer, useRef, useState } from 'react';
+import Chat from './Chat';
 
 const config: RTCConfiguration = {
   iceServers: [
@@ -137,7 +138,7 @@ function App() {
   return (
     <div >
       <h1>Hello Web RTC</h1>
-      <Agent />
+      <Chat />
     </div>
   );
 }
