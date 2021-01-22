@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useReducer, useState } from 'react';
+import { FormEvent, useEffect, useReducer, useRef, useState } from 'react';
 
 const config: RTCConfiguration = {
   iceServers: [
@@ -7,109 +7,127 @@ const config: RTCConfiguration = {
     }
   ],
 };
-const peerConnection = new RTCPeerConnection(config);
-
-(window as any).peerConnection = peerConnection;
 
 function iceReducer(canidates: RTCIceCandidate[], newCanidate: RTCIceCandidate): RTCIceCandidate[] {
   return [...canidates, newCanidate];
 }
 
 function Agent() {
-  const [connectionState, setConnectionState] = useState<RTCPeerConnectionState>();
-  const [iceCanidates, addIceCandiates] = useReducer(iceReducer, []);
+  const [, rerender] = useReducer((val: number) => val++, 0);
+  const [webSocket] = useState<WebSocket>(() => {
+    const ws = new WebSocket('ws://localhost:8080');
+    ws.onopen = () => {
+      console.log('ws opened');
+    };
+    return ws;
+  });
+  const [peerConnection] = useState<RTCPeerConnection>(() => {
+    const conn = new RTCPeerConnection(config);
+    return conn;
+  });
+  const [sendChannel, setSendChannel] = useState<RTCDataChannel>();
+  const [messages, setMessages] = useState<any[]>([]);
 
   useEffect(() => {
-    peerConnection.addEventListener('connectionstatechange', () => {
-      setConnectionState(peerConnection.connectionState);
-    });
-
-    peerConnection.onicecandidate = (event: RTCPeerConnectionIceEvent) => {
-      if (event.candidate) {
-        addIceCandiates(event.candidate);
+    peerConnection.onicecandidate = ({candidate}: RTCPeerConnectionIceEvent) => {
+      if (candidate) {
+        console.log('Got canidate: ', candidate);
+        webSocket.send(JSON.stringify({candidate}));
       }
+      rerender();
     };
-
     peerConnection.onicecandidateerror = (ev: RTCPeerConnectionIceErrorEvent) => {
       console.error(ev);
     };
-
-    peerConnection.oniceconnectionstatechange = (event: Event) => {
-      console.log('Ice Connection State', peerConnection.iceConnectionState);
+    peerConnection.onconnectionstatechange = () => {
+      rerender();
     };
+    peerConnection.onsignalingstatechange = () => {
+      rerender();
+    };
+    peerConnection.ondatachannel = (event: RTCDataChannelEvent) => {
+      console.log('Got data channel event: ', event);
+    };
+  }, [peerConnection, webSocket]);
 
-  }, []);
+  useEffect(() => {
+    webSocket.onmessage = async (ev: MessageEvent<any>) => {
+      console.log('Got WS message', ev);
+      const payload = JSON.parse(ev.data);
 
-  const [localDescription, setLocalDescription] = useState<RTCSessionDescriptionInit>();
-  const [dataChannel, setDataChannel] = useState<RTCDataChannel>();
-  const [messages, setMessages] = useState<any[]>([]);
+      if (payload.offer) {
+        await peerConnection.setRemoteDescription(payload.offer);
+        const answer = await peerConnection.createAnswer();
+        peerConnection.setLocalDescription(answer);
+        console.log('Created answer: ', answer);
+        webSocket.send(JSON.stringify({answer}));
+      }
+
+      if (payload.answer) {
+        console.log('Got answer ', payload.answer);
+        await peerConnection.setRemoteDescription(payload.answer);
+      }
+
+      if (payload.canidate) {
+        await peerConnection.addIceCandidate(payload.canidate);
+      }
+    };
+  }, [webSocket, peerConnection]);
 
   async function initCall() {
-    const newChannel = peerConnection.createDataChannel('my-channel');
-    setDataChannel(newChannel);
-    newChannel.onmessage = ((ev: MessageEvent<any>) => {
-
-    });
+    const dataChannel = peerConnection.createDataChannel('message-channel');
+    dataChannel.onopen = () => console.log('send channel opened');
+    dataChannel.onclose = () => console.log('send channel closed');
+    setSendChannel(dataChannel);
 
     const offer = await peerConnection.createOffer();
     await peerConnection.setLocalDescription(offer);
-    setLocalDescription(offer);
+    webSocket.send(JSON.stringify({offer}));
+
+    peerConnection.ondatachannel = (ev: RTCDataChannelEvent) => {
+      console.log('Data channel event: ', ev);
+    };
   }
 
-  async function onAnswer(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const sdpInput = event.currentTarget.elements.namedItem('offer') as HTMLTextAreaElement;
-    const offer = JSON.parse(sdpInput.value) as RTCSessionDescriptionInit;
+  // async function onAnswer(event: FormEvent<HTMLFormElement>) {
+  //   event.preventDefault();
+  //   const sdpInput = event.currentTarget.elements.namedItem('offer') as HTMLTextAreaElement;
+  //   const offer = JSON.parse(sdpInput.value) as RTCSessionDescriptionInit;
 
-    peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
-    if (!localDescription) {
-      const answer = await peerConnection.createAnswer();
-      await peerConnection.setLocalDescription(answer);
-      setLocalDescription(answer);
-    }
-  }
+  //   peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+  //   if (!localDescription) {
+  //     const answer = await peerConnection.createAnswer();
+  //     await peerConnection.setLocalDescription(answer);
+  //     setLocalDescription(answer);
+  //   }
+  // }
 
-  async function addCanidate(event: FormEvent<HTMLFormElement>) {
+  // async function addCanidate(event: FormEvent<HTMLFormElement>) {
+  //   event.preventDefault();
+  //   const sdpInput = event.currentTarget.elements.namedItem('canidate') as HTMLTextAreaElement;
+  //   const canidate = JSON.parse(sdpInput.value) as RTCIceCandidate;
+  //   await peerConnection.addIceCandidate(canidate);
+  // }
+
+  const [currentMessage, setCurrentMessage] = useState('');
+  function sendMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const sdpInput = event.currentTarget.elements.namedItem('canidate') as HTMLTextAreaElement;
-    const canidate = JSON.parse(sdpInput.value) as RTCIceCandidate;
-    await peerConnection.addIceCandidate(canidate);
+    sendChannel?.send(JSON.stringify({message: currentMessage}));
+    setCurrentMessage('');
   }
 
   return (
     <section>
-      <div>Connection State: {connectionState}</div>
-      {peerConnection.signalingState}
-      Canidates:
-      <ul>
-        {iceCanidates.map((canidate, i) => (
-          <li key={i}>
-            <code lang='json'>{JSON.stringify(canidate, null, 2)}</code>
-          </li>
-        ))}
-      </ul>
-      <div>
-        <button onClick={initCall}>Create Call</button>
-        <label>
-          Local SDP:
-          <code lang='json'>{JSON.stringify(localDescription, null, 2)}</code>
-        </label>
-      </div>
+      <button onClick={initCall}>Create Call</button>
+      <div>Connection State: {peerConnection.connectionState}</div>
+      <div>Signaling State: {peerConnection.signalingState}</div>
 
-      <form onSubmit={onAnswer}>
-        <label>
-          Remote SDP:
-          <textarea required name='offer' rows={5} cols={80}></textarea>
-        </label>
-        <button type='submit'>Answer</button>
-      </form>
-
-      <form onSubmit={addCanidate}>
-        <label>
-          Add Canidate:
-          <textarea required name='canidate' rows={5} cols={80}></textarea>
-          <button type='submit'>Add</button>
-        </label>
+      <form onSubmit={sendMessage}>
+        <input
+          value={currentMessage}
+          onChange={e => setCurrentMessage(e.currentTarget.value)}
+        />
+        <button type='submit'>Send</button>
       </form>
     </section>
   );
