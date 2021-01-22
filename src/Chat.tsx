@@ -6,6 +6,7 @@ const configuration: RTCConfiguration = {
     ]
 };
 
+
 export default function Chat() {
     const webSocket = useRef<WebSocket>();
     const [socketOpen, setSocketOpen] = useState(false);
@@ -14,14 +15,16 @@ export default function Chat() {
     const connection = useRef<RTCPeerConnection>();
     const [dataChannel, setDataChannel] = useState<RTCDataChannel>();
 
+    function onIceCandidate(this: RTCPeerConnection, {candidate}: RTCPeerConnectionIceEvent) {
+        console.log('got canidate', candidate)
+        if (candidate) {
+            webSocket.current?.send(JSON.stringify(candidate));
+        }
+    }
+
     function setupConnection(): RTCPeerConnection {
         const localConnection = new RTCPeerConnection(configuration);
-        localConnection.onicecandidate = ({ candidate }) => {
-            console.log('got canidate', candidate)
-            if (candidate) {
-                webSocket.current?.send(JSON.stringify(candidate));
-            }
-        };
+        localConnection.onicecandidate = onIceCandidate;
 
         localConnection.ondatachannel = event => {
             console.log('got data channel');
@@ -46,7 +49,7 @@ export default function Chat() {
         const answer = await localConnection.createAnswer();
         localConnection.setLocalDescription(answer);
         webSocket.current?.send(JSON.stringify(answer));
-        console.group('offer handled');
+        console.log('offer handled');
     }
 
     async function onAnswer(answer: RTCSessionDescription) {
