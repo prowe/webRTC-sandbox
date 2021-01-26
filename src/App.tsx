@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useReducer, useRef, useState } from 'react';
 import Chat from './Chat';
+import CryptoBox from './CryptoBox';
 
 const config: RTCConfiguration = {
   iceServers: [
@@ -139,6 +140,7 @@ function App() {
     <div >
       <h1>Hello Web RTC</h1>
       <Chat />
+      <CryptoBox />
     </div>
   );
 }

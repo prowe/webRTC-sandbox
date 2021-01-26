@@ -10,8 +10,6 @@ const configuration: RTCConfiguration = {
 export default function Chat() {
     const webSocket = useRef<WebSocket>();
     const [socketOpen, setSocketOpen] = useState(false);
-    const [socketMessages, setSocketMessages] = useState<any[]>([]);
-    const [alert, setAlert] = useState(null);
     const connection = useRef<RTCPeerConnection>();
     const [dataChannel, setDataChannel] = useState<RTCDataChannel>();
 
@@ -72,7 +70,6 @@ export default function Chat() {
         webSocket.current.onmessage = message => {
             const data = JSON.parse(message.data);
             console.log('got message ', data)
-            setSocketMessages(prev => [...prev, data]);
             if (data.type === 'offer') {
                 onOffer(data as RTCSessionDescription);
             } else if (data.type === 'answer') {
