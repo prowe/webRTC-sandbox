@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useReducer, useRef, useState } from 'react';
 import Chat from './Chat';
+import Chat2 from './Chat2';
 import CryptoBox from './CryptoBox';
 
 const config: RTCConfiguration = {
@@ -139,8 +140,8 @@ function App() {
   return (
     <div >
       <h1>Hello Web RTC</h1>
-      <Chat />
-      <CryptoBox />
+      <Chat2 />
+      {/* <CryptoBox /> */}
     </div>
   );
 }
