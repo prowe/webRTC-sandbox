@@ -1,46 +1,30 @@
-# Getting Started with Create React App
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+# The Protocol
 
-## Available Scripts
+## Bootstrap Server
+Listens on a websocket. The first connection is held, when the second is connected, pair it with the first, the third is paird with the fourth, etc.
 
-In the project directory, you can run:
+When a message is recieved, forward it to the paired connection.
 
-### `npm start`
+## Gossip
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+Each node contains `L` connections to other nodes. For each connection it maintains a set of "interested in public keys". When it recieves a post, it forwards it to all interested nodes and decrements the TTL on those messages.
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+Nodes drop messages that have a TTL of 1.
 
-### `npm test`
+Nodes can also send an interest message. This message lists public keys that the node is interested in.
+When a Node recieves an interest message, it stores interest in the connection and forwards the interest message to connected nodes.
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+If a node does not renew interest after `x` amount of time it looses interest in that public key.
 
-### `npm run build`
+## An Account
+Consists of
+- A public/private key pair
+- A List of public keys that are being followed:
+    - Each key can have an 'Alias' that is a user provided name for the key
+- A timeline of messages recently received.
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+## References
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
-
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
-
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
-
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
+- https://blog.logrocket.com/get-a-basic-chat-application-working-with-webrtc/
+- https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto

@@ -31,21 +31,20 @@ export default class FabricConnection {
         this._peerConnection.onicecandidate = ev => this._onIceCanidate(ev);
         this._peerConnection.ondatachannel = ev => this._onDataChannel(ev);
         const dataChannel = this._peerConnection.createDataChannel("messages");
-        dataChannel.onopen = () => {
-            this.onStatusChange("Data channel is open and ready to be used.");
-            this.dataChannel = dataChannel;
-        }
-        dataChannel.onmessage = ev => this._onDataChannelMessage(ev);
+        dataChannel.onopen = () => this._onDataChannelOpen(dataChannel);
     }
 
     private async _onDataChannel(event: RTCDataChannelEvent) {
         this.onStatusChange('Obtained Data Channel');
         let receiveChannel = event.channel;
-        receiveChannel.onopen = () => {
-            this.onStatusChange("Data channel is open and ready to be used.");
-            this.dataChannel = receiveChannel;
-        };
-        receiveChannel.onmessage = ev => this._onDataChannelMessage(ev);
+        receiveChannel.onopen = () => this._onDataChannelOpen(receiveChannel);
+    }
+
+    private _onDataChannelOpen(dataChannel: RTCDataChannel) {
+        this.onStatusChange("Data channel is open and ready to be used.");
+        dataChannel.onmessage = ev => this._onDataChannelMessage(ev);
+        this.dataChannel = dataChannel;
+        this._webSocket.close();
     }
 
     private _onDataChannelMessage(event: MessageEvent<any>) {
