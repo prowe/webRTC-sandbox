@@ -71,11 +71,15 @@ export default class FabricConnection {
     }
 
     private async _onOffer(offer: RTCSessionDescription) {
-        this.onStatusChange('Received Offer');
-        await this._peerConnection.setRemoteDescription(offer);
-        const answer = await this._peerConnection.createAnswer();
-        this._peerConnection.setLocalDescription(answer);
-        this._webSocket.send(JSON.stringify(answer));
+        try {
+            this.onStatusChange('Received Offer');
+            await this._peerConnection.setRemoteDescription(offer);
+            const answer = await this._peerConnection.createAnswer();
+            this._peerConnection.setLocalDescription(answer);
+            this._webSocket.send(JSON.stringify(answer));
+        } catch (e) {
+            console.error('Error in state ', this._peerConnection.signalingState, e);
+        }
     }
 
     private async _onAnswer(answer: RTCSessionDescription) {
