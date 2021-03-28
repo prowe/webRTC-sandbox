@@ -1,4 +1,5 @@
 import { Dispatch, FormEvent, SetStateAction, useState } from "react";
+import AsyncRTC from "./AsyncRTC";
 import Chat2 from "./Chat2";
 import SignupButton from "./SignupButton";
 
@@ -54,7 +55,7 @@ function FollowingList({entries, setEntries}: FollowingListProps) {
   );
 }
 
-function App() {
+function App2() {
   const [following, setFollowing] = useState<FollowingListEntry[]>([]);
   const [keyPair, setKeyPair] = useState<CryptoKeyPair>();
   const [publicKey, setPublicKey] = useState<JsonWebKey>();
@@ -78,6 +79,10 @@ function App() {
       {keyPair && <Chat2 keyPair={keyPair}/>}
     </div>
   );
+}
+
+function App() {
+  return <AsyncRTC />;
 }
 
 export default App;

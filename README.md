@@ -15,7 +15,7 @@ Nodes drop messages that have a TTL of 1.
 Nodes can also send an interest message. This message lists public keys that the node is interested in.
 When a Node recieves an interest message, it stores interest in the connection and forwards the interest message to connected nodes.
 
-If a node does not renew interest after `x` amount of time it looses interest in that public key.
+If a node does not renew interest after `x` amount of time it looses interest in that public key./fingerprint
 
 ## An Account
 Consists of
@@ -28,3 +28,8 @@ Consists of
 
 - https://blog.logrocket.com/get-a-basic-chat-application-working-with-webrtc/
 - https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto
+
+
+## How should the network be wired?
+Websockets and RTCDataChannel are just bi-directional pipes. Can we use them interchangebly?
+

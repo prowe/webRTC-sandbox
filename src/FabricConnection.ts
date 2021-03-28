@@ -18,6 +18,7 @@ export default class FabricConnection {
 
     private _webSocket: WebSocket;
     private _peerConnection: RTCPeerConnection;
+    private makingOffer = false;
 
     constructor (options: FabricConnectionOptions) {
         this.onStatusChange = options.onStatusChange;
@@ -30,8 +31,22 @@ export default class FabricConnection {
         this._peerConnection = new RTCPeerConnection(configuration);
         this._peerConnection.onicecandidate = ev => this._onIceCanidate(ev);
         this._peerConnection.ondatachannel = ev => this._onDataChannel(ev);
+        this._peerConnection.onnegotiationneeded = () => this._onNegotiationNeeded();
         const dataChannel = this._peerConnection.createDataChannel("messages");
         dataChannel.onopen = () => this._onDataChannelOpen(dataChannel);
+    }
+
+    private async _onNegotiationNeeded() {
+        try {
+            this.makingOffer = true;
+            const offer = await this._peerConnection.createOffer();
+            await this._peerConnection.setLocalDescription(offer);
+            this._webSocket.send(JSON.stringify(this._peerConnection.localDescription));
+        } catch (err) {
+            console.error(err);
+        } finally {
+            this.makingOffer = false;
+        }
     }
 
     private async _onDataChannel(event: RTCDataChannelEvent) {
